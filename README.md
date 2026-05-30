@@ -2,74 +2,62 @@
 
 Turn any product photo into a high-converting Amazon listing image in minutes.
 
-## What It Does
+## Overview
 
-Lumina AI analyzes your competitors' best-performing listing images and recreates that winning style with your own product — entirely original, never copied.
+Lumina AI analyzes top-performing competitor listing images and recreates that winning style with your own product — entirely original, never copied. The platform combines a guided multi-step frontend with a custom Node.js backend that orchestrates image generation via the OpenAI API.
 
-**Workflow:**
-1. Upload your raw product photos (any background, any lighting)
-2. Describe your product — materials, dimensions, target audience
-3. Add up to 8 competitor listing images as style references
-4. Receive unique, ready-to-upload listing images with retry & history
+## How It Works
+
+1. **Upload** — Drop your raw product photos (any background, any lighting)
+2. **Describe** — Provide product details: materials, dimensions, target audience, key selling points
+3. **Reference** — Add up to 8 competitor listing images as style references
+4. **Generate** — Receive unique, ready-to-upload listing images with per-image retry and version history
 
 ## Features
 
-- **Competitor Intelligence** — Learns from top-performing listings, applies that style to yours
-- **Up to 8 images per session** — One per competitor reference
-- **Retry with feedback** — Not happy? Retry individual images and browse version history
-- **100% Plagiarism-Free** — Same winning strategy, completely new design
-- **~3 min per session** — Fast turnaround from upload to download
-
-## Pricing
-
-| Plan | Price | Details |
-|------|-------|---------|
-| Starter | Free | 1 session · 4 competitor images · 1 retry per image |
-| Pro | $20 / run | 8 competitor images · 3 retries · priority processing · high-res downloads |
+- **Competitor Intelligence** — Style, lighting, and composition extracted from competitor references; applied to your product
+- **Up to 8 images per session** — One generated image per competitor reference
+- **Retry with feedback** — Regenerate individual images; browse previous versions inline
+- **100% original output** — No plagiarism; each image is newly generated from your product and the analyzed style
+- **~3 min per session** — From upload to download
 
 ## Tech Stack
 
 **Frontend**
-- Vanilla HTML/CSS/JS
-- Tailwind CSS (CDN)
+- HTML5 / CSS3 / Vanilla JavaScript
+- Tailwind CSS
 - Material Symbols
 
 **Backend**
 - Node.js + Express
 - OpenAI API (image generation)
-- Multer (file uploads)
-- n8n (workflow automation)
+- Multer (multipart file handling)
+- UUID (session management)
 
 ## Getting Started
 
 ### Prerequisites
+
 - Node.js 18+
 - OpenAI API key
 
 ### Setup
 
 ```bash
-# Clone the repo
 git clone https://github.com/Murat-Akar/lumina-ai.git
-cd lumina-ai
+cd lumina-ai/backend
 
-# Install backend dependencies
-cd backend
 npm install
 
-# Configure environment
 cp .env.example .env
-# Add your OpenAI API key to .env
+# Set OPENAI_API_KEY in .env
 
-# Start the backend
 npm start
 ```
 
-Open `index.html` in your browser or serve the root folder with any static file server.
-
 ### Environment Variables
 
-```
+```env
 OPENAI_API_KEY=your_openai_api_key
 PORT=3000
 ```
@@ -78,16 +66,15 @@ PORT=3000
 
 ```
 lumina-ai/
-├── index.html          # Landing page
-├── login.html          # Auth page
-├── wizard-step1.html   # Upload photos
-├── wizard-step3.html   # Results & download
-├── auth.js             # Authentication logic
-├── config.js           # Frontend config
-├── style.css           # Global styles
-├── n8n-workflow.json   # n8n automation workflow
+├── index.html            # Landing page
+├── login.html            # Authentication
+├── wizard-step1.html     # Step 1: Upload photos
+├── wizard-step3.html     # Step 3: Results & download
+├── auth.js               # Auth logic
+├── config.js             # Frontend configuration
+├── style.css             # Global styles
 └── backend/
-    ├── server.js       # Express server
+    ├── server.js         # Express API server
     ├── package.json
     └── .env.example
 ```

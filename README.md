@@ -59,7 +59,6 @@ npm start
 
 ```env
 OPENAI_API_KEY=your_openai_api_key
-PORT=3000
 ```
 
 ## Project Structure

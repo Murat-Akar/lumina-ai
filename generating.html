@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Lumina AI — Generating Your Images</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=Geist:wght@400;500;600&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+  tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        colors: {
+          "surface-container-high": "#2a2a2c", "surface": "#131315",
+          "surface-container-low": "#1c1b1d", "surface-container-lowest": "#0e0e10",
+          "surface-container": "#201f21", "primary": "#b8c3ff",
+          "background": "#131315", "surface-bright": "#39393b",
+          "on-surface": "#e5e1e4", "on-primary": "#002388",
+          "primary-container": "#2e5bff", "surface-container-highest": "#353437",
+          "on-surface-variant": "#c4c5d9", "on-primary-container": "#efefff",
+          "outline-variant": "#434656"
+        },
+        borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+        fontFamily: { "headline-lg": ["Manrope"], "headline-xl": ["Manrope"], "label-caps": ["Geist"], "body-md": ["Geist"], "body-sm": ["Geist"], "label-md": ["Geist"] },
+        fontSize: {
+          "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+          "headline-xl": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+          "label-caps": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+          "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+          "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+          "label-md": ["14px", {"lineHeight": "20px", "fontWeight": "500"}]
+        }
+      }
+    }
+  }
+</script>
+<style>
+  .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+
+  /* Orb animation */
+  .orb-core {
+    width: 120px; height: 120px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, rgba(184,195,255,0.9), rgba(46,91,255,0.6));
+    box-shadow: 0 0 60px rgba(46,91,255,0.5), 0 0 120px rgba(184,195,255,0.2), inset 0 0 30px rgba(255,255,255,0.1);
+    animation: orb-pulse 2s ease-in-out infinite;
+  }
+  @keyframes orb-pulse {
+    0%, 100% { transform: scale(1); box-shadow: 0 0 60px rgba(46,91,255,0.5), 0 0 120px rgba(184,195,255,0.2); }
+    50% { transform: scale(1.06); box-shadow: 0 0 80px rgba(46,91,255,0.7), 0 0 160px rgba(184,195,255,0.35); }
+  }
+
+  .orb-ring-1 {
+    position: absolute;
+    width: 200px; height: 200px;
+    border-radius: 50%;
+    border: 1px solid rgba(184,195,255,0.25);
+    animation: ring-spin 6s linear infinite;
+  }
+  .orb-ring-1::after {
+    content: '';
+    position: absolute;
+    top: -4px; left: 50%;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: #b8c3ff;
+    box-shadow: 0 0 10px #b8c3ff;
+  }
+
+  .orb-ring-2 {
+    position: absolute;
+    width: 280px; height: 280px;
+    border-radius: 50%;
+    border: 1px solid rgba(46,91,255,0.3);
+    animation: ring-spin 10s linear infinite reverse;
+  }
+  .orb-ring-2::after {
+    content: '';
+    position: absolute;
+    bottom: -4px; left: 50%;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: rgba(46,91,255,0.9);
+    box-shadow: 0 0 10px rgba(46,91,255,0.9);
+  }
+
+  .orb-ring-3 {
+    position: absolute;
+    width: 360px; height: 360px;
+    border-radius: 50%;
+    border: 1px solid rgba(184,195,255,0.08);
+    animation: ring-spin 16s linear infinite;
+  }
+
+  @keyframes ring-spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+
+  /* Step list animations */
+  .gen-step { transition: all 0.5s ease; }
+  .gen-step.active .step-icon { background: rgba(46,91,255,0.2); border-color: rgba(184,195,255,0.5); }
+  .gen-step.active .step-spinner { display: flex; }
+  .gen-step.active .step-check { display: none; }
+  .gen-step.done .step-icon { background: rgba(46,91,255,0.15); border-color: rgba(184,195,255,0.3); }
+  .gen-step.done .step-spinner { display: none; }
+  .gen-step.done .step-check { display: flex; }
+  .gen-step.done .step-label { color: #e5e1e4; }
+  .gen-step.pending .step-icon { background: transparent; border-color: rgba(255,255,255,0.08); }
+  .gen-step.pending .step-spinner { display: none; }
+  .gen-step.pending .step-check { display: none; }
+  .gen-step.pending .step-label { color: #c4c5d9; opacity: 0.4; }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spinner { animation: spin 1s linear infinite; }
+
+  /* Progress bar */
+  .progress-fill {
+    transition: width 1s ease-out;
+  }
+
+  /* Background glow */
+  .bg-glow {
+    background: radial-gradient(ellipse at 50% 40%, rgba(46,91,255,0.08) 0%, transparent 60%);
+  }
+</style>
+<script src="auth.js"></script>
+<script src="config.js"></script>
+</head>
+<body class="bg-background text-on-surface font-body-md min-h-screen flex flex-col">
+
+<!-- Top Nav -->
+<nav class="sticky top-0 z-50 flex justify-between items-center px-6 py-3 w-full bg-surface/80 backdrop-blur-xl border-b border-outline-variant/30">
+  <a href="index.html" class="text-xl font-bold text-primary tracking-tight font-headline-lg">Lumina AI</a>
+  <div class="flex items-center gap-2 px-4 py-2 bg-surface-container rounded-full border border-outline-variant/30">
+    <span class="w-2 h-2 bg-primary rounded-full animate-pulse"></span>
+    <span class="font-label-md text-on-surface-variant text-sm">AI Processing</span>
+  </div>
+</nav>
+
+<!-- Main Content -->
+<main class="flex-1 flex flex-col items-center justify-center px-6 py-12 relative bg-glow">
+
+  <!-- Orb -->
+  <div class="relative flex items-center justify-center mb-16" style="width:400px;height:400px;max-width:90vw;max-height:90vw;">
+    <div class="orb-ring-3"></div>
+    <div class="orb-ring-2"></div>
+    <div class="orb-ring-1"></div>
+    <div class="orb-core flex items-center justify-center relative z-10">
+      <span class="material-symbols-outlined text-white text-4xl" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+    </div>
+  </div>
+
+  <!-- Heading -->
+  <div class="text-center mb-10 max-w-xl">
+    <h1 class="font-headline-xl text-[32px] md:text-[40px] font-bold text-on-surface mb-3">
+      Generating Your Listings
+    </h1>
+    <p class="font-body-md text-on-surface-variant">
+      Our AI is analyzing competitor styles and creating unique images with your product.
+      <br/>
+      <span id="image-count-msg" class="text-primary font-bold"></span>
+    </p>
+  </div>
+
+  <!-- Progress Bar -->
+  <div class="w-full max-w-md mb-10">
+    <div class="flex justify-between mb-2">
+      <span class="font-label-caps text-label-caps text-on-surface-variant">Progress</span>
+      <span id="progress-pct" class="font-label-caps text-label-caps text-primary">0%</span>
+    </div>
+    <div class="h-2 bg-surface-container-highest rounded-full overflow-hidden">
+      <div id="progress-fill" class="h-full bg-primary rounded-full progress-fill shadow-[0_0_12px_rgba(184,195,255,0.5)]" style="width: 0%"></div>
+    </div>
+  </div>
+
+  <!-- Steps List -->
+  <div class="w-full max-w-md space-y-3">
+    <div id="step-1" class="gen-step pending flex items-center gap-4 p-4 bg-surface-container rounded-xl border border-outline-variant/20">
+      <div class="step-icon w-10 h-10 rounded-full border flex items-center justify-center shrink-0">
+        <div class="step-spinner hidden w-6 h-6 rounded-full border-2 border-primary border-t-transparent spinner"></div>
+        <div class="step-check hidden w-6 h-6 items-center justify-center">
+          <span class="material-symbols-outlined text-primary text-[18px]" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+        </div>
+        <span class="step-num font-label-caps text-label-caps text-on-surface-variant">1</span>
+      </div>
+      <div>
+        <p class="step-label font-label-md font-bold">Analyzing product photos</p>
+        <p class="font-body-sm text-on-surface-variant text-[12px]">Extracting product features and silhouette</p>
+      </div>
+    </div>
+
+    <div id="step-2" class="gen-step pending flex items-center gap-4 p-4 bg-surface-container rounded-xl border border-outline-variant/20">
+      <div class="step-icon w-10 h-10 rounded-full border flex items-center justify-center shrink-0">
+        <div class="step-spinner hidden w-6 h-6 rounded-full border-2 border-primary border-t-transparent spinner"></div>
+        <div class="step-check hidden w-6 h-6 items-center justify-center">
+          <span class="material-symbols-outlined text-primary text-[18px]" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+        </div>
+        <span class="step-num font-label-caps text-label-caps text-on-surface-variant">2</span>
+      </div>
+      <div>
+        <p class="step-label font-label-md font-bold">Processing product details</p>
+        <p class="font-body-sm text-on-surface-variant text-[12px]">Understanding key selling points and tone</p>
+      </div>
+    </div>
+
+    <div id="step-3" class="gen-step pending flex items-center gap-4 p-4 bg-surface-container rounded-xl border border-outline-variant/20">
+      <div class="step-icon w-10 h-10 rounded-full border flex items-center justify-center shrink-0">
+        <div class="step-spinner hidden w-6 h-6 rounded-full border-2 border-primary border-t-transparent spinner"></div>
+        <div class="step-check hidden w-6 h-6 items-center justify-center">
+          <span class="material-symbols-outlined text-primary text-[18px]" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+        </div>
+        <span class="step-num font-label-caps text-label-caps text-on-surface-variant">3</span>
+      </div>
+      <div>
+        <p class="step-label font-label-md font-bold">Generating listing images</p>
+        <p class="font-body-sm text-on-surface-variant text-[12px]">Creating unique AI outputs per competitor reference</p>
+      </div>
+    </div>
+
+    <div id="step-4" class="gen-step pending flex items-center gap-4 p-4 bg-surface-container rounded-xl border border-outline-variant/20">
+      <div class="step-icon w-10 h-10 rounded-full border flex items-center justify-center shrink-0">
+        <div class="step-spinner hidden w-6 h-6 rounded-full border-2 border-primary border-t-transparent spinner"></div>
+        <div class="step-check hidden w-6 h-6 items-center justify-center">
+          <span class="material-symbols-outlined text-primary text-[18px]" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+        </div>
+        <span class="step-num font-label-caps text-label-caps text-on-surface-variant">4</span>
+      </div>
+      <div>
+        <p class="step-label font-label-md font-bold">Finalizing your results</p>
+        <p class="font-body-sm text-on-surface-variant text-[12px]">Preparing download and preview</p>
+      </div>
+    </div>
+  </div>
+
+  <p class="mt-8 font-body-sm text-on-surface-variant/50">This usually takes 2–4 minutes. Please don't close this tab.</p>
+</main>
+
+<script>
+  luminaCheckAuth();
+
+  const BACKEND_URL = (typeof LUMINA_CONFIG !== 'undefined') ? LUMINA_CONFIG.backendUrl : '';
+
+  const imageCount = parseInt(sessionStorage.getItem('lumina_image_count') || '1');
+  document.getElementById('image-count-msg').textContent =
+    `Generating ${imageCount} listing image${imageCount !== 1 ? 's' : ''} from your competitor references...`;
+
+  // --- Helpers ---
+  function dataUrlToBlob(dataUrl) {
+    const arr = dataUrl.split(',');
+    const mime = arr[0].match(/:(.*?);/)[1];
+    const bstr = atob(arr[1]);
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    while (n--) u8arr[n] = bstr.charCodeAt(n);
+    return new Blob([u8arr], { type: mime });
+  }
+
+  function setStepState(stepNum, state) {
+    const el = document.getElementById(`step-${stepNum}`);
+    if (!el) return;
+    el.classList.remove('pending', 'active', 'done');
+    el.classList.add(state);
+    const numEl = el.querySelector('.step-num');
+    if (numEl) numEl.style.display = (state === 'pending') ? '' : 'none';
+  }
+
+  function setProgress(pct) {
+    document.getElementById('progress-fill').style.width = `${pct}%`;
+    document.getElementById('progress-pct').textContent = `${pct}%`;
+  }
+
+  function showError(msg) {
+    [1,2,3,4].forEach(n => setStepState(n, 'pending'));
+    setProgress(0);
+    const existing = document.getElementById('lumina-error-banner');
+    if (existing) existing.remove();
+    const div = document.createElement('div');
+    div.id = 'lumina-error-banner';
+    div.style.cssText = 'margin-top:2rem;padding:1.5rem 2rem;background:rgba(127,29,29,0.35);border:1px solid rgba(252,165,165,0.3);border-radius:12px;max-width:500px;text-align:center;';
+    div.innerHTML = `
+      <p style="color:#fca5a5;font-weight:700;margin-bottom:.5rem;">Generation Failed</p>
+      <p style="color:rgba(252,165,165,0.75);font-size:14px;margin-bottom:1.25rem;">${msg}</p>
+      <a href="wizard-step1.html" style="display:inline-block;padding:10px 24px;background:rgba(184,195,255,0.12);border:1px solid rgba(184,195,255,0.25);border-radius:8px;color:#b8c3ff;font-size:14px;font-weight:600;text-decoration:none;">← Try Again</a>`;
+    document.querySelector('main').appendChild(div);
+  }
+
+  // Map real backend progress (0-100) to UI steps
+  function applyProgress(pct) {
+    setProgress(pct);
+    if (pct < 20)       { setStepState(1, 'active'); }
+    else if (pct < 40)  { setStepState(1, 'done'); setStepState(2, 'active'); }
+    else if (pct < 90)  { setStepState(1, 'done'); setStepState(2, 'done'); setStepState(3, 'active'); }
+    else if (pct < 100) { setStepState(1, 'done'); setStepState(2, 'done'); setStepState(3, 'done'); setStepState(4, 'active'); }
+    else                { [1,2,3,4].forEach(n => setStepState(n, 'done')); }
+  }
+
+  // Initial step state
+  setStepState(1, 'active'); setProgress(5);
+
+  // --- Main flow ---
+  async function startGeneration() {
+    if (!BACKEND_URL) {
+      showError('Backend URL is not configured. Update <strong>config.js</strong> with your deployed backend URL.');
+      return;
+    }
+
+    let productPhotos, competitorImages, description;
+    try {
+      productPhotos    = JSON.parse(sessionStorage.getItem('lumina_product_photos') || '[]');
+      competitorImages = JSON.parse(sessionStorage.getItem('lumina_competitor_images') || '[]');
+      description      = sessionStorage.getItem('lumina_description') || '';
+    } catch(e) {
+      showError('Could not read uploaded images. Please go back and re-upload.');
+      return;
+    }
+
+    if (!productPhotos.length)    { showError('Product photo missing — go back to Step 1.'); return; }
+    if (!competitorImages.length) { showError('Competitor images missing — go back to Step 3.'); return; }
+
+    // ── Step 1: submit job ──
+    let jobId;
+    try {
+      const formData = new FormData();
+      formData.append('product_image', dataUrlToBlob(productPhotos[0].src), productPhotos[0].name || 'product.jpg');
+      formData.append('product_info', description);
+      competitorImages.forEach((img, i) =>
+        formData.append(`competitor_image_${i}`, dataUrlToBlob(img.src), img.name || `competitor_${i}.jpg`)
+      );
+
+      const resp = await fetch(`${BACKEND_URL}/generate`, { method: 'POST', body: formData });
+      if (!resp.ok) {
+        const txt = await resp.text().catch(() => '');
+        throw new Error(`Server ${resp.status}: ${txt.slice(0, 200)}`);
+      }
+      const json = await resp.json();
+      jobId = json.jobId;
+      if (!jobId) throw new Error('No jobId returned from server.');
+    } catch(err) {
+      showError('Could not start generation: ' + err.message);
+      return;
+    }
+
+    // ── Step 2: poll /status/:jobId every 5 seconds ──
+    const pollInterval = 5000;
+    const maxWaitMs    = 20 * 60 * 1000; // 20 minutes hard limit
+    let   elapsed      = 0;
+
+    const poll = setInterval(async () => {
+      elapsed += pollInterval;
+
+      if (elapsed >= maxWaitMs) {
+        clearInterval(poll);
+        showError('Timed out after 20 minutes. Try with fewer competitor images.');
+        return;
+      }
+
+      try {
+        const resp = await fetch(`${BACKEND_URL}/status/${jobId}`);
+        if (!resp.ok) return; // transient error, retry next tick
+        const job = await resp.json();
+
+        // Update progress bar with real backend data
+        applyProgress(job.progress || 0);
+
+        if (job.status === 'done') {
+          clearInterval(poll);
+          if (!job.images || !job.images.length) {
+            showError('Generation completed but no images were returned.');
+            return;
+          }
+          // Images are too large for sessionStorage (~14MB) — store jobId instead
+          // results.html fetches directly from backend
+          sessionStorage.setItem('lumina_jobId', jobId);
+          sessionStorage.setItem('lumina_image_count', String(job.images.length));
+          applyProgress(100);
+          setTimeout(() => { window.location.href = 'results.html'; }, 1200);
+        }
+
+        if (job.status === 'failed') {
+          clearInterval(poll);
+          showError(job.error || 'Generation failed on the server.');
+        }
+
+      } catch(e) {
+        // Network hiccup — stay in the loop and retry
+      }
+    }, pollInterval);
+  }
+
+  startGeneration();
+</script>
+</body>
+</html>

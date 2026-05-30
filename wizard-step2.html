@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Lumina AI — Step 2: Product Details</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=Geist:wght@400;500;600&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+  tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        colors: {
+          "surface-container-high": "#2a2a2c", "surface": "#131315",
+          "surface-container-low": "#1c1b1d", "surface-container-lowest": "#0e0e10",
+          "surface-container": "#201f21", "primary": "#b8c3ff",
+          "background": "#131315", "surface-bright": "#39393b",
+          "on-surface": "#e5e1e4", "on-primary": "#002388",
+          "primary-container": "#2e5bff", "surface-container-highest": "#353437",
+          "on-surface-variant": "#c4c5d9", "on-primary-container": "#efefff",
+          "outline-variant": "#434656", "error": "#ffb4ab", "outline": "#8e90a2"
+        },
+        borderRadius: { "DEFAULT": "0.5rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+        fontFamily: { "headline-lg": ["Manrope"], "headline-xl": ["Manrope"], "label-caps": ["Geist"], "body-md": ["Geist"], "body-sm": ["Geist"], "label-md": ["Geist"] },
+        fontSize: {
+          "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+          "label-caps": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+          "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+          "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+          "label-md": ["14px", {"lineHeight": "20px", "fontWeight": "500"}]
+        }
+      }
+    }
+  }
+</script>
+<style>
+  .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+  .glass-panel { background: rgba(32,31,33,0.6); backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.05); }
+  .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+  .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+  .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(184,195,255,0.2); border-radius: 10px; }
+  .mode-active { background: rgba(184,195,255,0.15); color: #b8c3ff; border-color: rgba(184,195,255,0.3); }
+  .dropzone-file-active { border-color: rgba(184,195,255,0.5) !important; background: rgba(46,91,255,0.08); }
+</style>
+<script src="auth.js"></script>
+</head>
+<body class="bg-surface text-on-surface font-body-md min-h-screen">
+
+<!-- Sidebar -->
+<aside class="fixed left-0 top-0 h-full flex flex-col p-4 z-40 bg-surface-container-low border-r border-outline-variant/20 w-72">
+  <div class="flex items-center gap-3 mb-10 px-2">
+    <div class="w-10 h-10 bg-primary-container rounded-lg flex items-center justify-center text-on-primary-container">
+      <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+    </div>
+    <div>
+      <a href="index.html" class="font-headline-lg text-[20px] text-primary leading-none font-bold block">Lumina AI</a>
+      <p class="text-[11px] font-label-caps text-on-surface-variant uppercase tracking-wider">Amazon Listing</p>
+    </div>
+  </div>
+  <!-- Step Nav -->
+  <nav class="space-y-1 mb-auto">
+    <div class="flex items-center gap-3 px-4 py-3 rounded-xl text-on-surface-variant opacity-60">
+      <div class="w-7 h-7 rounded-full bg-primary flex items-center justify-center text-on-primary text-xs font-bold shrink-0">
+        <span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">check</span>
+      </div>
+      <div>
+        <p class="font-label-md font-bold text-on-surface-variant">Product Photos</p>
+        <p class="text-[11px] text-on-surface-variant">Done</p>
+      </div>
+      <span class="ml-auto text-[10px] font-label-caps text-green-400 border border-green-400/30 px-2 py-0.5 rounded-full">Done</span>
+    </div>
+    <div class="flex items-center gap-3 px-4 py-3 bg-primary/10 border border-primary/20 rounded-xl">
+      <div class="w-7 h-7 rounded-full bg-primary flex items-center justify-center text-on-primary text-xs font-bold shrink-0">2</div>
+      <div>
+        <p class="font-label-md font-bold text-primary">Product Details</p>
+        <p class="text-[11px] text-on-surface-variant">Describe your product</p>
+      </div>
+      <span class="ml-auto text-[10px] font-label-caps text-primary border border-primary/30 px-2 py-0.5 rounded-full">Current</span>
+    </div>
+    <div class="flex items-center gap-3 px-4 py-3 rounded-xl opacity-40 pointer-events-none">
+      <div class="w-7 h-7 rounded-full bg-surface-container-high border border-outline-variant flex items-center justify-center text-on-surface-variant text-xs font-bold shrink-0">3</div>
+      <div>
+        <p class="font-label-md text-on-surface-variant">Competitor Images</p>
+        <p class="text-[11px] text-on-surface-variant">Style benchmarking</p>
+      </div>
+    </div>
+  </nav>
+  <div class="mt-6 pt-4 border-t border-outline-variant/20 space-y-1">
+    <a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant hover:text-on-surface hover:bg-surface-bright/20 rounded-xl transition-colors" href="#">
+      <span class="material-symbols-outlined">settings</span><span class="font-label-md">Settings</span>
+    </a>
+  </div>
+</aside>
+
+<!-- Main -->
+<main class="ml-72 min-h-screen flex flex-col relative overflow-y-auto custom-scrollbar bg-surface">
+  <!-- Top Bar -->
+  <header class="sticky top-0 z-50 flex justify-between items-center px-8 py-4 w-full bg-surface/80 backdrop-blur-xl border-b border-outline-variant/20">
+    <div class="flex items-center gap-4">
+      <a href="wizard-step1.html" class="w-10 h-10 rounded-full flex items-center justify-center hover:bg-surface-bright/20 transition-all active:scale-90">
+        <span class="material-symbols-outlined">arrow_back</span>
+      </a>
+      <div>
+        <h2 class="font-headline-lg text-[22px] font-bold text-primary tracking-tight">Creation Wizard</h2>
+        <p class="font-label-caps text-on-surface-variant">Step 2 of 3: Product Details</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-4">
+      <div class="flex items-center gap-2 bg-surface-container-high px-4 py-2 rounded-full border border-outline-variant/30">
+        <span class="w-2 h-2 bg-primary rounded-full animate-pulse"></span>
+        <span class="font-label-md text-on-surface-variant">AI Assistant Ready</span>
+      </div>
+      <div class="w-8 h-8 rounded-full bg-primary-container flex items-center justify-center text-on-primary-container text-sm font-bold">U</div>
+    </div>
+  </header>
+
+  <!-- Progress Bar -->
+  <div class="px-8 mt-6">
+    <div class="w-full h-1.5 bg-surface-container-highest rounded-full overflow-hidden">
+      <div class="h-full bg-primary-container rounded-full transition-all duration-700 ease-out" style="width: 66.6%"></div>
+    </div>
+    <div class="flex justify-between mt-2 px-1">
+      <span class="font-label-caps text-label-caps text-on-surface-variant">Photos ✓</span>
+      <span class="font-label-caps text-label-caps text-primary font-bold">Product Details</span>
+      <span class="font-label-caps text-label-caps text-on-surface-variant">Competitors</span>
+    </div>
+  </div>
+
+  <!-- Content -->
+  <div class="flex-1 px-8 py-8 max-w-[1200px] w-full mx-auto">
+    <div class="grid grid-cols-12 gap-8">
+      <!-- Left: Description + File Upload -->
+      <div class="col-span-12 lg:col-span-8 space-y-6">
+
+        <!-- Mode Toggle -->
+        <div class="flex gap-2 p-1 bg-surface-container-lowest rounded-xl border border-outline-variant/20 w-fit">
+          <button id="mode-text-btn" onclick="switchMode('text')"
+            class="px-5 py-2 rounded-lg font-label-md transition-all mode-active">
+            <span class="material-symbols-outlined text-sm align-middle mr-1">edit</span>Type Manually
+          </button>
+          <button id="mode-file-btn" onclick="switchMode('file')"
+            class="px-5 py-2 rounded-lg font-label-md text-on-surface-variant hover:text-on-surface transition-all">
+            <span class="material-symbols-outlined text-sm align-middle mr-1">upload_file</span>Upload File
+          </button>
+        </div>
+
+        <!-- Text Mode -->
+        <div id="text-mode" class="glass-panel rounded-xl p-6 space-y-4">
+          <div class="flex justify-between items-center">
+            <label class="font-headline-lg text-[20px] text-on-surface flex items-center gap-2">
+              <span class="material-symbols-outlined text-primary">description</span>Product Description
+            </label>
+          </div>
+          <textarea id="description-text"
+            class="w-full h-64 bg-surface-container-lowest border border-outline-variant/30 rounded-lg p-4 text-on-surface focus:outline-none focus:ring-1 focus:ring-primary/50 transition-all custom-scrollbar font-body-md placeholder:text-on-surface-variant/40 resize-none"
+            placeholder="Describe your product in detail. Include materials, dimensions, target audience, key selling points, and anything that makes it unique..."
+            maxlength="10000"
+            oninput="updateCharCount(this)"></textarea>
+          <div class="flex justify-between items-center">
+            <p id="char-warning" class="text-[12px] text-on-surface-variant/60 hidden font-label-caps">Approaching character limit</p>
+            <p id="char-count" class="font-label-caps text-on-surface-variant text-right ml-auto">0 / 10000</p>
+          </div>
+
+          <!-- Example Prompts -->
+          <div class="space-y-2">
+            <p class="font-label-caps text-label-caps text-on-surface-variant">Quick Examples:</p>
+            <div class="flex flex-wrap gap-2">
+              <button onclick="loadExample('kitchen')" class="px-3 py-1.5 rounded-lg bg-surface-container text-on-surface-variant font-label-caps text-[11px] border border-outline-variant/30 hover:border-primary/40 hover:text-primary transition-all">🍳 Kitchen Gadget</button>
+              <button onclick="loadExample('beauty')" class="px-3 py-1.5 rounded-lg bg-surface-container text-on-surface-variant font-label-caps text-[11px] border border-outline-variant/30 hover:border-primary/40 hover:text-primary transition-all">💄 Beauty Product</button>
+              <button onclick="loadExample('fitness')" class="px-3 py-1.5 rounded-lg bg-surface-container text-on-surface-variant font-label-caps text-[11px] border border-outline-variant/30 hover:border-primary/40 hover:text-primary transition-all">🏋️ Fitness Gear</button>
+              <button onclick="loadExample('tech')" class="px-3 py-1.5 rounded-lg bg-surface-container text-on-surface-variant font-label-caps text-[11px] border border-outline-variant/30 hover:border-primary/40 hover:text-primary transition-all">📱 Tech Accessory</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- File Mode -->
+        <div id="file-mode" class="hidden glass-panel rounded-xl p-6 space-y-4">
+          <label class="font-headline-lg text-[20px] text-on-surface flex items-center gap-2">
+            <span class="material-symbols-outlined text-primary">upload_file</span>Upload Description File
+          </label>
+          <div id="file-dropzone"
+            class="border-2 border-dashed border-outline-variant/30 rounded-xl p-10 flex flex-col items-center justify-center gap-4 hover:border-primary/40 hover:bg-primary/5 transition-all cursor-pointer group"
+            onclick="document.getElementById('desc-file-input').click()">
+            <input type="file" id="desc-file-input" accept=".txt,.pdf,.docx,.doc,.json,.md,.csv,.rtf" class="hidden" onchange="handleDescFile(this.files[0])"/>
+            <div class="w-16 h-16 rounded-full bg-surface-container-high flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+              <span class="material-symbols-outlined text-3xl text-primary">cloud_upload</span>
+            </div>
+            <div class="text-center">
+              <p class="font-body-md text-on-surface font-semibold">Drop file here</p>
+              <p class="font-body-sm text-on-surface-variant mt-1">.TXT .PDF .DOCX .JSON .MD .CSV .RTF — Max 5MB</p>
+            </div>
+            <button type="button" class="px-6 py-2 bg-surface-bright/20 text-on-surface rounded-full font-label-md hover:bg-surface-bright/40 transition-colors border border-outline-variant/30">Browse Files</button>
+          </div>
+          <div id="file-preview" class="hidden space-y-2 mt-2">
+            <div id="file-info" class="flex items-center justify-between p-3 bg-surface-container-lowest border border-outline-variant/20 rounded-lg">
+              <div class="flex items-center gap-3">
+                <span class="material-symbols-outlined text-primary">insert_drive_file</span>
+                <div>
+                  <p id="file-name" class="font-label-md text-on-surface">—</p>
+                  <p id="file-size" class="font-label-caps text-on-surface-variant text-[10px]">—</p>
+                </div>
+              </div>
+              <button onclick="removeDescFile()" class="material-symbols-outlined text-on-surface-variant hover:text-error transition-colors">delete</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: Tips -->
+      <div class="col-span-12 lg:col-span-4 space-y-6">
+        <div class="glass-panel rounded-xl p-6">
+          <div class="flex items-center gap-2 mb-4">
+            <span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">tips_and_updates</span>
+            <h3 class="font-headline-lg text-[18px] text-on-surface">Writing Tips</h3>
+          </div>
+          <ul class="space-y-3">
+            <li class="flex items-start gap-3 font-body-sm text-on-surface-variant">
+              <span class="material-symbols-outlined text-primary text-[16px] mt-0.5 shrink-0">check_circle</span>
+              Mention specific materials (e.g. "brushed aluminum", "organic cotton")
+            </li>
+            <li class="flex items-start gap-3 font-body-sm text-on-surface-variant">
+              <span class="material-symbols-outlined text-primary text-[16px] mt-0.5 shrink-0">check_circle</span>
+              Include dimensions and weight if relevant
+            </li>
+            <li class="flex items-start gap-3 font-body-sm text-on-surface-variant">
+              <span class="material-symbols-outlined text-primary text-[16px] mt-0.5 shrink-0">check_circle</span>
+              Describe your target audience and use cases
+            </li>
+            <li class="flex items-start gap-3 font-body-sm text-on-surface-variant">
+              <span class="material-symbols-outlined text-primary text-[16px] mt-0.5 shrink-0">check_circle</span>
+              Add your top 3-5 key selling points
+            </li>
+            <li class="flex items-start gap-3 font-body-sm text-on-surface-variant">
+              <span class="material-symbols-outlined text-primary text-[16px] mt-0.5 shrink-0">check_circle</span>
+              Include brand tone: premium, playful, technical, etc.
+            </li>
+          </ul>
+        </div>
+        <div class="glass-panel rounded-xl p-6 border border-primary/10">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="w-2 h-2 bg-primary rounded-full animate-pulse"></span>
+            <h3 class="font-label-md font-bold text-on-surface">Pro Tip</h3>
+          </div>
+          <p class="font-body-sm text-on-surface-variant">
+            The more specific your description, the better the AI understands your product's unique value. Minimum 30 characters required.
+          </p>
+          <div id="validation-hint" class="mt-4 p-3 bg-primary/5 rounded-lg border border-primary/10 hidden">
+            <p class="font-label-caps text-label-caps text-primary">✓ Ready to continue</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Action Footer -->
+  <div class="sticky bottom-0 w-full p-6 px-8 bg-surface-container-low/90 backdrop-blur-md border-t border-outline-variant/20 flex justify-between items-center">
+    <a href="wizard-step1.html" class="px-8 py-3 font-label-md text-on-surface-variant hover:text-on-surface transition-all active:scale-95 flex items-center gap-2">
+      <span class="material-symbols-outlined">arrow_back</span>Back
+    </a>
+    <div class="flex gap-4">
+      <button id="next-btn" onclick="goToStep3()" disabled
+        class="px-10 py-3 rounded-lg font-label-md bg-primary-container text-on-primary-container font-bold shadow-lg flex items-center gap-2 opacity-40 cursor-not-allowed transition-all">
+        Next: Competitor Images <span class="material-symbols-outlined text-[20px]">chevron_right</span>
+      </button>
+    </div>
+  </div>
+</main>
+
+<!-- Atmospheric BG -->
+<div class="fixed top-[-10%] right-[-10%] w-[40%] h-[40%] bg-primary/5 blur-[120px] rounded-full -z-10 pointer-events-none"></div>
+<div class="fixed bottom-[-5%] left-[20%] w-[30%] h-[30%] bg-primary/3 blur-[100px] rounded-full -z-10 pointer-events-none"></div>
+
+<script>
+  luminaCheckAuth();
+
+  const MIN_CHARS = 30;
+  let currentMode = 'text';
+  let uploadedFileName = null;
+
+  const EXAMPLES = {
+    kitchen: `Premium Stainless Steel Herb Roller — Multi-Blade Kitchen Herb Mincer\n\nProduct: A professional-grade herb roller with 5 interchangeable stainless steel blades. Made from 304 food-grade stainless steel and BPA-free ABS plastic handle.\n\nDimensions: 18cm L × 8cm W × 7cm H | Weight: 280g\n\nTarget Audience: Home cooks, professional chefs, meal-prep enthusiasts aged 25-55.\n\nKey Selling Points:\n• 5 blade configurations for fine, medium, and coarse cuts\n• Dishwasher-safe components\n• Non-slip grip handle with ergonomic design\n• Perfect for basil, parsley, rosemary, mint, and more\n• 30-day money-back guarantee\n\nTone: Premium kitchen tool, practical yet stylish. Scandinavian-inspired minimalist design.`,
+    beauty: `Organic Rosehip Face Serum — 30ml | Cold-Pressed & Unrefined\n\nProduct: A 100% pure organic rosehip seed oil serum, cold-pressed and unrefined to preserve maximum nutrients. Certified organic by USDA.\n\nDimensions: 5cm W × 10cm H (glass dropper bottle) | Volume: 30ml\n\nTarget Audience: Women 28-50 seeking natural anti-aging skincare, clean beauty enthusiasts.\n\nKey Selling Points:\n• Rich in Vitamin A, C & E — reduces fine lines and scars\n• Suitable for all skin types including sensitive\n• No additives, preservatives, or synthetic fragrances\n• Amber glass bottle to protect against UV degradation\n• Ethically sourced from Chilean Andes\n\nTone: Clean, natural, luxurious. Artisanal meets science.`,
+    fitness: `Resistance Bands Set — Premium Latex Workout Bands (5 Levels)\n\nProduct: A set of 5 color-coded resistance bands made from 100% natural latex, ranging from 5lb to 50lb resistance.\n\nDimensions: Each band 200cm × 4.5cm | Carrying bag included\n\nTarget Audience: Home gym users, physical therapy patients, yoga practitioners, athletes aged 18-60.\n\nKey Selling Points:\n• 5 resistance levels for progressive training\n• Anti-snap, double-layered latex construction\n• Works for upper body, lower body, and full-body workouts\n• Includes access to 30-day workout program PDF\n• Compact and travel-friendly with mesh bag\n\nTone: Energetic, motivational, professional athlete quality at home.`,
+    tech: `Magnetic Phone Wallet Stand — 3-in-1 MagSafe Compatible\n\nProduct: A slim magnetic phone wallet that doubles as a kickstand and attaches to MagSafe-compatible iPhones (12-15 series). RFID blocking, genuine leather.\n\nDimensions: 9.5cm × 6cm × 0.5cm | Weight: 35g | Holds 3-4 cards\n\nTarget Audience: iPhone users 20-45 who value minimalist carry, professionals and commuters.\n\nKey Selling Points:\n• 100% genuine top-grain leather with stitched edges\n• Strong N52 neodymium magnets — won't fall off\n• RFID/NFC blocking protection\n• Adjustable kickstand for landscape video viewing\n• Compatible with MagSafe charging (no removal needed)\n\nTone: Minimalist, premium, professional EDC (everyday carry) aesthetic.`
+  };
+
+  function switchMode(mode) {
+    currentMode = mode;
+    const textMode = document.getElementById('text-mode');
+    const fileMode = document.getElementById('file-mode');
+    const textBtn = document.getElementById('mode-text-btn');
+    const fileBtn = document.getElementById('mode-file-btn');
+
+    if (mode === 'text') {
+      textMode.classList.remove('hidden');
+      fileMode.classList.add('hidden');
+      textBtn.classList.add('mode-active');
+      textBtn.classList.remove('text-on-surface-variant');
+      fileBtn.classList.remove('mode-active');
+      fileBtn.classList.add('text-on-surface-variant');
+    } else {
+      textMode.classList.add('hidden');
+      fileMode.classList.remove('hidden');
+      fileBtn.classList.add('mode-active');
+      fileBtn.classList.remove('text-on-surface-variant');
+      textBtn.classList.remove('mode-active');
+      textBtn.classList.add('text-on-surface-variant');
+    }
+    validateStep();
+  }
+
+  function updateCharCount(textarea) {
+    const count = textarea.value.length;
+    document.getElementById('char-count').textContent = `${count} / 10000`;
+    const warning = document.getElementById('char-warning');
+    if (count > 9500) { warning.classList.remove('hidden'); warning.style.color = '#f59e0b'; }
+    else { warning.classList.add('hidden'); }
+    validateStep();
+  }
+
+  function validateStep() {
+    const nextBtn = document.getElementById('next-btn');
+    const hint = document.getElementById('validation-hint');
+    let isValid = false;
+
+    if (currentMode === 'text') {
+      const text = document.getElementById('description-text').value.trim();
+      isValid = text.length >= MIN_CHARS;
+    } else {
+      isValid = uploadedFileName !== null;
+    }
+
+    if (isValid) {
+      nextBtn.disabled = false;
+      nextBtn.classList.remove('opacity-40', 'cursor-not-allowed');
+      nextBtn.classList.add('hover:brightness-110', 'active:scale-95');
+      hint.classList.remove('hidden');
+    } else {
+      nextBtn.disabled = true;
+      nextBtn.classList.add('opacity-40', 'cursor-not-allowed');
+      nextBtn.classList.remove('hover:brightness-110', 'active:scale-95');
+      hint.classList.add('hidden');
+    }
+  }
+
+  function loadExample(type) {
+    const textarea = document.getElementById('description-text');
+    textarea.value = EXAMPLES[type] || '';
+    updateCharCount(textarea);
+  }
+
+  function handleDescFile(file) {
+    if (!file) return;
+    const allowedExts = /\.(txt|pdf|docx|doc|json|md|csv|rtf)$/i;
+    if (!allowedExts.test(file.name)) {
+      alert('Unsupported file type. Please upload .txt, .pdf, .docx, .json, .md, .csv, or .rtf');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) { alert('File must be under 5MB'); return; }
+
+    uploadedFileName = file.name;
+    const sizeMB = (file.size / (1024*1024)).toFixed(2);
+    document.getElementById('file-name').textContent = file.name;
+    document.getElementById('file-size').textContent = `${sizeMB} MB • Ready`;
+    document.getElementById('file-preview').classList.remove('hidden');
+    validateStep();
+
+    // For text-based files, read content and populate the text area automatically
+    if (/\.(txt|json|md|csv|rtf)$/i.test(file.name)) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        let content = e.target.result;
+        // For JSON, pretty-print it
+        if (/\.json$/i.test(file.name)) {
+          try { content = JSON.stringify(JSON.parse(content), null, 2); } catch(err) {}
+        }
+        sessionStorage.setItem('lumina_description', content.slice(0, 10000));
+      };
+      reader.readAsText(file);
+    } else {
+      sessionStorage.setItem('lumina_description', `[File: ${file.name}]`);
+    }
+  }
+
+  function removeDescFile() {
+    uploadedFileName = null;
+    document.getElementById('file-preview').classList.add('hidden');
+    document.getElementById('desc-file-input').value = '';
+    validateStep();
+    sessionStorage.removeItem('lumina_description');
+  }
+
+  // File mode drag-drop
+  const fileDropzone = document.getElementById('file-dropzone');
+  fileDropzone.addEventListener('dragover', (e) => { e.preventDefault(); fileDropzone.classList.add('dropzone-file-active'); });
+  fileDropzone.addEventListener('dragleave', () => fileDropzone.classList.remove('dropzone-file-active'));
+  fileDropzone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    fileDropzone.classList.remove('dropzone-file-active');
+    if (e.dataTransfer.files.length) handleDescFile(e.dataTransfer.files[0]);
+  });
+
+  function goToStep3() {
+    let description = '';
+    if (currentMode === 'text') {
+      description = document.getElementById('description-text').value.trim();
+      if (description.length < MIN_CHARS) return;
+    } else {
+      if (!uploadedFileName) return;
+      description = `[File: ${uploadedFileName}]`;
+    }
+    sessionStorage.setItem('lumina_description', description);
+    window.location.href = 'wizard-step3.html';
+  }
+
+  // Restore from sessionStorage
+  window.addEventListener('DOMContentLoaded', () => {
+    try {
+      const saved = sessionStorage.getItem('lumina_description');
+      if (saved && !saved.startsWith('[File:')) {
+        document.getElementById('description-text').value = saved;
+        updateCharCount(document.getElementById('description-text'));
+      }
+    } catch(e) {}
+  });
+</script>
+</body>
+</html>

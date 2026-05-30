@@ -1,0 +1,371 @@
+{
+  "name": "Lumina AI — Amazon Listing Image Generator",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "lumina-generate",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [4512, 1632],
+      "id": "11111111-1111-1111-1111-111111111111",
+      "name": "Lumina Webhook",
+      "webhookId": "lumina-ai-generate"
+    },
+    {
+      "parameters": {
+        "jsCode": "const webhookItem = $input.item;\nconst binaryData = webhookItem.binary || {};\nconst jsonData = webhookItem.json || {};\n\nconst OPENAI_CONFIG = {\n  generation_model: \"gpt-image-2\",\n  analysis_model: \"gpt-5.5\",\n  generation_endpoint: \"https://api.openai.com/v1/images/edits\",\n  analysis_endpoint: \"https://api.openai.com/v1/responses\",\n  image_size: \"1024x1024\",\n  image_quality: \"medium\",\n  analysis_reasoning_effort: \"medium\",\n  analysis_text_verbosity: \"medium\"\n};\n\nconst productImageBinary = binaryData['product_image'];\nif (!productImageBinary) throw new Error('Missing product_image in webhook payload');\n\nconst productInfoText = String(jsonData['product_info'] || '').trim();\nif (!productInfoText) throw new Error('Missing product_info text in webhook payload');\n\nconst competitorKeys = Object.keys(binaryData)\n  .filter(k => k.startsWith('competitor_image_'))\n  .sort((a, b) => {\n    const na = parseInt(a.replace('competitor_image_', ''), 10);\n    const nb = parseInt(b.replace('competitor_image_', ''), 10);\n    return na - nb;\n  });\n\nif (!competitorKeys.length) throw new Error('No competitor_image_N fields found in webhook payload');\n\nreturn competitorKeys.map((key, i) => ({\n  json: {\n    openai: OPENAI_CONFIG,\n    slot: i + 1,\n    slot_key: 'competitor ' + (i + 1),\n    competitor_filename: binaryData[key].fileName || ('competitor_' + (i + 1) + '.jpg'),\n    output_filename: 'generated_image_' + (i + 1) + '.png',\n    productInfo: { description: productInfoText },\n    product_info_raw: { description: productInfoText },\n    product_info_ready: true,\n    product_image_ready: true,\n    competitor_image_ready: true\n  },\n  binary: {\n    product_image: productImageBinary,\n    competitor_image: binaryData[key]\n  }\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [4760, 1632],
+      "id": "22222222-2222-2222-2222-222222222222",
+      "name": "Parse Webhook Input"
+    },
+    {
+      "parameters": {
+        "jsCode": "const inputItems = $input.all();\n\nconst STAGE_1_PROMPT = `\nAnalyze the competitor listing image and compare it against the Product Info document.\n\nYour goal is to identify the competitor image's REAL communication strategy,\nthen adapt that strategy safely using only supported product information.\n\nThe competitor image defines:\n- the communication topic\n- the buyer takeaway\n- the visual storytelling direction\n\nProduct Info defines:\n- factual correctness\n- supported capabilities\n- supported implementations\n- supported claims\n\nDo not invent new marketing angles that are not central to the competitor image.\n\nDo not oversimplify the competitor image into a generic product-category message.\n\nDistinguish between:\n- the surface-level product topic\nvs\n- the deeper buyer-facing communication strategy.\n\nIdentify:\n\n- the main communication strategy\n- the core buyer takeaway\n- the key visual priorities\n- the information hierarchy\n- the storytelling structure\n- the features being emphasized\n- unsupported claims/features\n- the closest supported replacements from Product Info\n\nCore Communication Focus ->\nIdentify the SINGLE most important communication goal of the competitor image.\n\nThen identify:\n- which supported product capabilities are ESSENTIAL to that message\n- which supported capabilities should be EXCLUDED because they are unrelated to the competitor image's main idea\n\nCommunication-Relevant Supported Features ->\nIdentify ONLY the supported product capabilities from Product Info that are:\n- fully supported\n- visually communicable\n- directly relevant to the competitor image's core communication goal\n\nA supported feature does NOT automatically belong in the image.\n\nKeep the response structured, concise, and practical.\n\nReturn the response as markdown text only.\n`.trim();\n\nconst outputItems = [];\n\nfor (let i = 0; i < inputItems.length; i++) {\n  const item = inputItems[i];\n\n  if (!item.binary?.competitor_image) {\n    throw new Error(`competitor_image binary missing on item ${i}`);\n  }\n\n  const competitorBuf = await this.helpers.getBinaryDataBuffer(i, \"competitor_image\");\n  const competitorMime = item.binary.competitor_image.mimeType || \"image/jpeg\";\n  const competitorDataUrl = `data:${competitorMime};base64,${competitorBuf.toString(\"base64\")}`;\n\n  const productInfoText = JSON.stringify(item.json.productInfo || {}, null, 2);\n\n  const fullPrompt = `${STAGE_1_PROMPT}\\n\\n==============================\\nPRODUCT INFO DOCUMENT\\nThis is the source of truth for supported claims, specs, features, materials, and product behavior.\\n==============================\\n\\n${productInfoText}\\n\\n==============================\\nFINAL STAGE 1 CHECK\\nAnalyze the competitor image's communication strategy, then safely adapt it using Product Info.\\n==============================`;\n\n  const body = {\n    model: item.json.openai?.analysis_model || \"gpt-5.5\",\n    reasoning: { effort: item.json.openai?.analysis_reasoning_effort || \"medium\" },\n    text: { verbosity: item.json.openai?.analysis_text_verbosity || \"medium\" },\n    input: [{\n      role: \"user\",\n      content: [\n        { type: \"input_text\", text: fullPrompt },\n        { type: \"input_image\", image_url: competitorDataUrl }\n      ]\n    }]\n  };\n\n  outputItems.push({\n    json: {\n      ...item.json,\n      active_prompt: fullPrompt,\n      stage1_prompt: STAGE_1_PROMPT,\n      stage1_full_prompt: fullPrompt,\n      stage1_request_body: body\n    },\n    binary: item.binary\n  });\n}\n\nreturn outputItems;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [7840, 1632],
+      "id": "0b74f628-0534-4510-8cd5-5abcceee0b0c",
+      "name": "Build Stage 1 - Competitor Strategy Analysis Request1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.openai.analysis_endpoint }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_OPENAI_API_KEY_HERE"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.stage1_request_body }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [8080, 1632],
+      "id": "31c9055a-c3da-46b0-80fc-54c4be371b15",
+      "name": "HTTP - Stage 1 Competitor Strategy Analysis1"
+    },
+    {
+      "parameters": {
+        "jsCode": "function extractResponsesText(response, stageName) {\n  if (!response) return \"\";\n  if (typeof response.output_text === \"string\" && response.output_text.trim()) return response.output_text.trim();\n  if (Array.isArray(response.output)) {\n    const parts = [];\n    for (const outputItem of response.output) {\n      if (!outputItem || !Array.isArray(outputItem.content)) continue;\n      for (const contentItem of outputItem.content) {\n        if (!contentItem) continue;\n        if (contentItem.type === \"output_text\" && typeof contentItem.text === \"string\") parts.push(contentItem.text);\n        if (contentItem.type === \"text\" && typeof contentItem.text === \"string\") parts.push(contentItem.text);\n      }\n    }\n    if (parts.length) return parts.join(\"\\n\").trim();\n  }\n  function fallbackFindText(x) {\n    if (x == null) return \"\";\n    if (typeof x === \"string\") return x;\n    if (Array.isArray(x)) return x.map(fallbackFindText).filter(Boolean).join(\"\\n\");\n    if (typeof x === \"object\") {\n      if (x.output_text) return fallbackFindText(x.output_text);\n      if (x.text) return fallbackFindText(x.text);\n      if (x.content) return fallbackFindText(x.content);\n      if (x.output) return fallbackFindText(x.output);\n      if (x.message) return fallbackFindText(x.message);\n      return Object.values(x).map(fallbackFindText).filter(Boolean).join(\"\\n\");\n    }\n    return String(x);\n  }\n  const fallbackText = fallbackFindText(response).trim();\n  if (fallbackText) return fallbackText;\n  throw new Error(`Could not extract ${stageName} text from OpenAI response. Preview: ` + JSON.stringify(response).slice(0, 2000));\n}\n\nconst responses = $input.all();\nconst requestItems = $(\"Build Stage 1 - Competitor Strategy Analysis Request1\").all();\n\nreturn responses.map((responseItem, i) => {\n  const originalItem = requestItems[i];\n  if (!originalItem) throw new Error(`Matching Stage 1 request item not found for item ${i}`);\n  const text = extractResponsesText(responseItem.json, \"Stage 1 Competitor Strategy Analysis\");\n  return {\n    json: {\n      ...originalItem.json,\n      stage1_competitor_strategy_analysis: text,\n      stage1_output_markdown: text,\n      stage1_raw_preview: JSON.stringify(responseItem.json).slice(0, 3000)\n    },\n    binary: originalItem.binary\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [8320, 1632],
+      "id": "6dc021a4-2ba9-4d91-be40-fd3943f04b11",
+      "name": "Parse Stage 1 - Competitor Strategy Analysis1"
+    },
+    {
+      "parameters": {
+        "jsCode": "const inputItems = $input.all();\n\nconst STAGE_2_PROMPT = `\nUsing the real product photo, Product Info document, and competitor strategy analysis, create a SAFE generation brief.\n\nFocus only on:\n- preserving real product accuracy\n- preventing hallucinated physical details\n- preventing unsupported claims/features\n- preserving visible screen/icons if present\n- keeping only the supported information that is directly relevant to the competitor image's PRIMARY communication goal\n\nThe competitor image defines the communication topic and communication structure.\nProduct Info defines the correct factual content.\nStage 1 defines the supported adaptation direction.\n\nDo not infer hidden functionality from the competitor image.\nDo NOT give layout, composition, or art direction instructions.\n\nIf the competitor image does NOT use communication text as a dominant part of the image structure,\nthe SAFE brief must NOT include taglines, feature labels, specifications, callouts, or instructional text.\n\nKeep the response short, practical, and specific.\nReturn markdown text only.\n`.trim();\n\nconst outputItems = [];\n\nfor (let i = 0; i < inputItems.length; i++) {\n  const item = inputItems[i];\n\n  if (!item.binary?.product_image) throw new Error(`product_image binary missing on item ${i}`);\n  if (!item.binary?.competitor_image) throw new Error(`competitor_image binary missing on item ${i}`);\n\n  const productBuf = await this.helpers.getBinaryDataBuffer(i, \"product_image\");\n  const competitorBuf = await this.helpers.getBinaryDataBuffer(i, \"competitor_image\");\n\n  const productMime = item.binary.product_image.mimeType || \"image/jpeg\";\n  const competitorMime = item.binary.competitor_image.mimeType || \"image/jpeg\";\n  const productDataUrl = `data:${productMime};base64,${productBuf.toString(\"base64\")}`;\n  const competitorDataUrl = `data:${competitorMime};base64,${competitorBuf.toString(\"base64\")}`;\n\n  const productInfoText = JSON.stringify(item.json.productInfo || {}, null, 2);\n  const stage1Text = item.json.stage1_competitor_strategy_analysis || item.json.stage1_output_markdown || \"\";\n\n  const fullPrompt = `${STAGE_2_PROMPT}\\n\\n==============================\\nPRODUCT INFO DOCUMENT\\n==============================\\n\\n${productInfoText}\\n\\n==============================\\nCOMPETITOR STRATEGY ANALYSIS FROM STAGE 1\\n==============================\\n\\n${stage1Text}\\n\\n==============================\\nFINAL SAFE BRIEF CHECK\\n==============================`;\n\n  const body = {\n    model: item.json.openai?.analysis_model || \"gpt-5.5\",\n    reasoning: { effort: item.json.openai?.analysis_reasoning_effort || \"medium\" },\n    text: { verbosity: item.json.openai?.analysis_text_verbosity || \"medium\" },\n    input: [{\n      role: \"user\",\n      content: [\n        { type: \"input_text\", text: fullPrompt },\n        { type: \"input_image\", image_url: productDataUrl },\n        { type: \"input_image\", image_url: competitorDataUrl }\n      ]\n    }]\n  };\n\n  outputItems.push({\n    json: { ...item.json, active_prompt: fullPrompt, stage2_prompt: STAGE_2_PROMPT, stage2_full_prompt: fullPrompt, stage2_request_body: body },\n    binary: item.binary\n  });\n}\n\nreturn outputItems;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [8560, 1632],
+      "id": "458a4c0d-7d4e-4135-a9ea-887a9c23e914",
+      "name": "Build Stage 2 - Safe Generation Brief Request1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.openai.analysis_endpoint }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_OPENAI_API_KEY_HERE"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.stage2_request_body }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [8800, 1632],
+      "id": "9452fbb3-7cb2-40fb-bc4b-549dc20e976e",
+      "name": "HTTP - Stage 2 Safe Generation Brief1"
+    },
+    {
+      "parameters": {
+        "jsCode": "function extractResponsesText(response, stageName) {\n  if (!response) return \"\";\n  if (typeof response.output_text === \"string\" && response.output_text.trim()) return response.output_text.trim();\n  if (Array.isArray(response.output)) {\n    const parts = [];\n    for (const outputItem of response.output) {\n      if (!outputItem || !Array.isArray(outputItem.content)) continue;\n      for (const contentItem of outputItem.content) {\n        if (!contentItem) continue;\n        if (contentItem.type === \"output_text\" && typeof contentItem.text === \"string\") parts.push(contentItem.text);\n        if (contentItem.type === \"text\" && typeof contentItem.text === \"string\") parts.push(contentItem.text);\n      }\n    }\n    if (parts.length) return parts.join(\"\\n\").trim();\n  }\n  throw new Error(`Could not extract ${stageName} text. Preview: ` + JSON.stringify(response).slice(0, 1000));\n}\n\nconst responses = $input.all();\nconst requestItems = $(\"Build Stage 2 - Safe Generation Brief Request1\").all();\n\nreturn responses.map((responseItem, i) => {\n  const originalItem = requestItems[i];\n  if (!originalItem) throw new Error(`Matching Stage 2 request item not found for item ${i}`);\n  const text = extractResponsesText(responseItem.json, \"Stage 2 Safe Generation Brief\");\n  return {\n    json: {\n      ...originalItem.json,\n      stage2_safe_generation_brief: text,\n      stage2_output_markdown: text,\n      stage2_raw_preview: JSON.stringify(responseItem.json).slice(0, 3000)\n    },\n    binary: originalItem.binary\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [9040, 1632],
+      "id": "e106db3b-b004-4097-9df0-44232fdda866",
+      "name": "Parse Stage 2 - Safe Generation Brief1"
+    },
+    {
+      "parameters": {
+        "jsCode": "const inputItems = $input.all();\n\nconst STAGE_3_PROMPT = `\nUse:\n- the FIRST attached image as the competitor/reference image for communication strategy\n- the SECOND attached image as the real product photo\n- the SAFE Generation Brief as the factual execution guide\n\nCreate a premium Amazon listing image.\n\nPreserve product accuracy, proportions, materials, and supported claims only.\nUnderstand the competitor image's communication goal but create an original visual execution.\nFocus on communicating the same buyer takeaway, not recreating the same scene.\n\nDo NOT closely mimic the competitor image's layout, composition, or spatial structure.\n\nSTRICT TEXT RULE:\nIf the competitor image does NOT use communication text as a major visual element,\nthe generated image must remain text-free.\n\nAvoid unsupported claims, hallucinated physical details, fake mechanisms.\nAspect ratio: 1:1\n`.trim();\n\nfunction extractStage2Text(value) {\n  if (!value) return \"\";\n  if (typeof value === \"string\") return value;\n  if (typeof value === \"object\") {\n    if (typeof value.text === \"string\") return value.text;\n    if (typeof value.output_text === \"string\") return value.output_text;\n    return JSON.stringify(value, null, 2);\n  }\n  return String(value);\n}\n\nreturn inputItems.map((item, i) => {\n  if (!item.binary?.product_image) throw new Error(`product_image binary missing on item ${i}`);\n  if (!item.binary?.competitor_image) throw new Error(`competitor_image binary missing on item ${i}`);\n\n  const stage2Text = extractStage2Text(item.json.stage2_safe_generation_brief) || extractStage2Text(item.json.stage2_output_markdown) || \"\";\n\n  const fullPrompt = `${STAGE_3_PROMPT}\\n\\n==============================\\nSAFE GENERATION BRIEF FROM STAGE 2\\n==============================\\n\\n${stage2Text}\\n\\n==============================\\nFINAL GENERATION CHECK\\n==============================`;\n\n  return {\n    json: { ...item.json, active_prompt: fullPrompt, stage3_prompt: STAGE_3_PROMPT, stage3_generation_prompt: fullPrompt },\n    binary: { ...item.binary, image_1_competitor: item.binary.competitor_image, image_2_product: item.binary.product_image }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [9280, 1632],
+      "id": "453d9d1b-a633-43ce-a33a-ce8995ce0b9f",
+      "name": "Build Stage 3 - First Image Generation Prompt1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.openai.generation_endpoint }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_OPENAI_API_KEY_HERE"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            { "name": "model", "value": "={{ $json.openai.generation_model }}" },
+            { "name": "prompt", "value": "={{ $json.active_prompt }}" },
+            { "name": "size", "value": "={{ $json.openai.image_size }}" },
+            { "name": "quality", "value": "={{ $json.openai.image_quality }}" },
+            { "parameterType": "formBinaryData", "name": "image[]", "inputDataFieldName": "image_1_competitor" },
+            { "parameterType": "formBinaryData", "name": "image[]", "inputDataFieldName": "image_2_product" }
+          ]
+        },
+        "options": {
+          "batching": { "batch": { "batchSize": 1, "batchInterval": 10000 } }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [9520, 1632],
+      "id": "11850d51-5e81-4cfe-8d33-d90eb5066c57",
+      "name": "HTTP - Stage 3 First Image Generation1"
+    },
+    {
+      "parameters": {
+        "jsCode": "function findB64(obj) {\n  if (!obj) return null;\n  if (typeof obj === \"string\") return null;\n  if (obj.b64_json) return obj.b64_json;\n  if (Array.isArray(obj)) { for (const item of obj) { const found = findB64(item); if (found) return found; } }\n  if (typeof obj === \"object\") { for (const value of Object.values(obj)) { const found = findB64(value); if (found) return found; } }\n  return null;\n}\n\nconst responses = $input.all();\nconst requestItems = $(\"Build Stage 3 - First Image Generation Prompt1\").all();\nconst outputItems = [];\n\nfor (let i = 0; i < responses.length; i++) {\n  const responseItem = responses[i];\n  const originalItem = requestItems[i];\n  if (!originalItem) throw new Error(`Matching Stage 3 request item not found for item ${i}`);\n\n  const b64 = findB64(responseItem.json);\n  if (!b64) throw new Error(`No b64_json found in Stage 3 response for item ${i}. Preview: ` + JSON.stringify(responseItem.json).slice(0, 1500));\n\n  const cleanB64 = String(b64).replace(/^data:image\\/\\w+;base64,/, \"\");\n  const buffer = Buffer.from(cleanB64, \"base64\");\n  const filename = `slot_${originalItem.json.slot || \"unknown\"}_stage3_first_image.png`;\n  const outputBinary = await this.helpers.prepareBinaryData(buffer, filename, \"image/png\");\n\n  outputItems.push({\n    json: { ...originalItem.json, stage3_first_image_created: true, stage3_first_image_filename: filename },\n    binary: { ...originalItem.binary, previous_output: outputBinary, stage3_first_image: outputBinary }\n  });\n}\n\nreturn outputItems;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [9760, 1632],
+      "id": "1f61c5e1-7c24-4dd9-a3f2-993d56e07c19",
+      "name": "Convert Stage 3 First Image Response1"
+    },
+    {
+      "parameters": {
+        "jsCode": "const inputItems = $input.all();\n\nconst STAGE_4_PROMPT = `\nLook at the previous image.\n\nPreserve the communication goal, customer takeaway, and information density.\nDo not preserve the layout, composition, framing, or spatial structure.\n\nThe redesign should feel like a different premium designer created the image from scratch while preserving the same buyer-facing message.\n\nPreserve the MESSAGE, not the geometry.\nAvoid small cosmetic changes.\nThe redesign should introduce a noticeably different visual execution at first glance.\n\nKeep the redesign: premium, visually original, communication-first.\nReturn markdown text only.\n`.trim();\n\nfunction extractText(value) {\n  if (!value) return \"\";\n  if (typeof value === \"string\") return value;\n  if (typeof value === \"object\") {\n    if (typeof value.text === \"string\") return value.text;\n    if (typeof value.output_text === \"string\") return value.output_text;\n    return JSON.stringify(value, null, 2);\n  }\n  return String(value);\n}\n\nconst outputItems = [];\n\nfor (let i = 0; i < inputItems.length; i++) {\n  const item = inputItems[i];\n  if (!item.binary?.previous_output) throw new Error(`previous_output binary missing on item ${i}`);\n\n  const previousBuf = await this.helpers.getBinaryDataBuffer(i, \"previous_output\");\n  const previousMime = item.binary.previous_output.mimeType || \"image/png\";\n  const previousDataUrl = `data:${previousMime};base64,${previousBuf.toString(\"base64\")}`;\n\n  const stage2Text = extractText(item.json.stage2_safe_generation_brief) || extractText(item.json.stage2_output_markdown) || \"\";\n\n  const fullPrompt = `${STAGE_4_PROMPT}\\n\\n==============================\\nSAFE GENERATION BRIEF FROM STAGE 2\\n==============================\\n\\n${stage2Text}\\n\\n==============================\\nFINAL STAGE 4 CHECK\\n==============================`;\n\n  const body = {\n    model: item.json.openai?.analysis_model || \"gpt-5.5\",\n    reasoning: { effort: item.json.openai?.analysis_reasoning_effort || \"medium\" },\n    text: { verbosity: item.json.openai?.analysis_text_verbosity || \"medium\" },\n    input: [{ role: \"user\", content: [{ type: \"input_text\", text: fullPrompt }, { type: \"input_image\", image_url: previousDataUrl }] }]\n  };\n\n  outputItems.push({\n    json: { ...item.json, active_prompt: fullPrompt, stage4_prompt: STAGE_4_PROMPT, stage4_full_prompt: fullPrompt, stage4_request_body: body },\n    binary: item.binary\n  });\n}\n\nreturn outputItems;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [10000, 1632],
+      "id": "b6329316-b082-4c51-846f-32f82d5b0b08",
+      "name": "Build Stage 4 - Design Difference Thinking Request1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.openai.analysis_endpoint }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_OPENAI_API_KEY_HERE"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.stage4_request_body }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [10240, 1632],
+      "id": "aff9d603-869c-4bf9-bb2c-420a95523e65",
+      "name": "HTTP - Stage 4 Design Difference Thinking1"
+    },
+    {
+      "parameters": {
+        "jsCode": "function extractResponsesText(response, stageName) {\n  if (!response) return \"\";\n  if (typeof response.output_text === \"string\" && response.output_text.trim()) return response.output_text.trim();\n  if (Array.isArray(response.output)) {\n    const parts = [];\n    for (const outputItem of response.output) {\n      if (!outputItem || !Array.isArray(outputItem.content)) continue;\n      for (const contentItem of outputItem.content) {\n        if (!contentItem) continue;\n        if (contentItem.type === \"output_text\" && typeof contentItem.text === \"string\") parts.push(contentItem.text);\n        if (contentItem.type === \"text\" && typeof contentItem.text === \"string\") parts.push(contentItem.text);\n      }\n    }\n    if (parts.length) return parts.join(\"\\n\").trim();\n  }\n  throw new Error(`Could not extract ${stageName} text. Preview: ` + JSON.stringify(response).slice(0, 1000));\n}\n\nconst responses = $input.all();\nconst requestItems = $(\"Build Stage 4 - Design Difference Thinking Request1\").all();\n\nreturn responses.map((responseItem, i) => {\n  const originalItem = requestItems[i];\n  if (!originalItem) throw new Error(`Matching Stage 4 request item not found for item ${i}`);\n  const text = extractResponsesText(responseItem.json, \"Stage 4 Design Difference Thinking\");\n  return {\n    json: { ...originalItem.json, stage4_design_difference_thinking: text, stage4_output_markdown: text },\n    binary: originalItem.binary\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [10480, 1632],
+      "id": "f774d153-41fd-484c-8778-dbfe039f2160",
+      "name": "Parse Stage 4 - Design Difference Thinking1"
+    },
+    {
+      "parameters": {
+        "jsCode": "const inputItems = $input.all();\n\nconst STAGE_5_PROMPT = `\nUse:\n- the FIRST attached image as the previous generated image and communication reference\n- the SECOND attached image as the real product photo\n- the redesign direction as the creative guide\n\nCreate a more premium and visually distinct Amazon listing image.\nThe redesign should feel substantially different at first glance while preserving the same buyer takeaway.\n\nDo NOT remove, weaken, or omit important factual information from the previous image.\nInformation and communication goals are LOCKED.\n\nThe redesign should change: layout structure, composition flow, framing, panel structure, spatial hierarchy.\nPreserve the MESSAGE, not the geometry.\n\nBackground: preserve the previous image's overall presentation category.\nIf previous is clean/white/minimal, redesign stays clean/white/minimal.\nIf previous is colorful/lifestyle-rich, redesign preserves that richness.\n\nText: if previous is text-free, redesign must remain text-free.\n\nAvoid unsupported claims, hallucinated physical details, fake product features.\nAspect ratio: 1:1\n`.trim();\n\nfunction extractText(value) {\n  if (!value) return \"\";\n  if (typeof value === \"string\") return value;\n  if (typeof value === \"object\") {\n    if (typeof value.text === \"string\") return value.text;\n    if (typeof value.output_text === \"string\") return value.output_text;\n    return JSON.stringify(value, null, 2);\n  }\n  return String(value);\n}\n\nreturn inputItems.map((item, i) => {\n  if (!item.binary?.product_image) throw new Error(`product_image binary missing on item ${i}`);\n  if (!item.binary?.previous_output) throw new Error(`previous_output binary missing on item ${i}`);\n\n  const stage2Text = extractText(item.json.stage2_safe_generation_brief) || extractText(item.json.stage2_output_markdown) || \"\";\n  const stage4Text = extractText(item.json.stage4_design_difference_thinking) || extractText(item.json.stage4_output_markdown) || \"\";\n\n  const fullPrompt = `${STAGE_5_PROMPT}\\n\\n==============================\\nSAFE GENERATION BRIEF FROM STAGE 2\\n==============================\\n\\n${stage2Text}\\n\\n==============================\\nREDESIGN DIRECTION FROM STAGE 4\\n==============================\\n\\n${stage4Text}\\n\\n==============================\\nFINAL GENERATION CHECK\\n==============================`;\n\n  return {\n    json: { ...item.json, active_prompt: fullPrompt, stage5_prompt: STAGE_5_PROMPT, stage5_generation_prompt: fullPrompt },\n    binary: { ...item.binary, image_1_previous: item.binary.previous_output, image_2_product: item.binary.product_image }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [10720, 1632],
+      "id": "e6fedcb5-fc5f-46ec-8456-7913819754a3",
+      "name": "Build Stage 5 - Final Retry Image Generation Prompt1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.openai.generation_endpoint }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_OPENAI_API_KEY_HERE"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            { "name": "model", "value": "={{ $json.openai.generation_model }}" },
+            { "name": "prompt", "value": "={{ $json.active_prompt }}" },
+            { "name": "size", "value": "={{ $json.openai.image_size }}" },
+            { "name": "quality", "value": "={{ $json.openai.image_quality }}" },
+            { "parameterType": "formBinaryData", "name": "image[]", "inputDataFieldName": "image_1_previous" },
+            { "parameterType": "formBinaryData", "name": "image[]", "inputDataFieldName": "image_2_product" }
+          ]
+        },
+        "options": {
+          "batching": { "batch": { "batchSize": 1, "batchInterval": 10000 } }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [10960, 1632],
+      "id": "228ab418-ca49-47fe-9b40-3a08c77860a4",
+      "name": "HTTP - Stage 5 Final Retry Image Generation1"
+    },
+    {
+      "parameters": {
+        "jsCode": "function findB64(obj) {\n  if (!obj) return null;\n  if (typeof obj === \"string\") return null;\n  if (obj.b64_json) return obj.b64_json;\n  if (Array.isArray(obj)) { for (const item of obj) { const found = findB64(item); if (found) return found; } }\n  if (typeof obj === \"object\") { for (const value of Object.values(obj)) { const found = findB64(value); if (found) return found; } }\n  return null;\n}\n\nconst responses = $input.all();\nconst requestItems = $(\"Build Stage 5 - Final Retry Image Generation Prompt1\").all();\nconst outputItems = [];\n\nfor (let i = 0; i < responses.length; i++) {\n  const responseItem = responses[i];\n  const originalItem = requestItems[i];\n  if (!originalItem) throw new Error(`Matching Stage 5 request item not found for item ${i}`);\n\n  const b64 = findB64(responseItem.json);\n  if (!b64) throw new Error(`No b64_json found in Stage 5 response for item ${i}. Preview: ` + JSON.stringify(responseItem.json).slice(0, 1500));\n\n  const cleanB64 = String(b64).replace(/^data:image\\/\\w+;base64,/, \"\");\n  const buffer = Buffer.from(cleanB64, \"base64\");\n  const filename = originalItem.json.output_filename || `generated_image_${originalItem.json.slot || i + 1}.png`;\n  const finalBinary = await this.helpers.prepareBinaryData(buffer, filename, \"image/png\");\n\n  outputItems.push({\n    json: {\n      slot: originalItem.json.slot,\n      slot_key: originalItem.json.slot_key,\n      output_filename: filename,\n      final_image_created: true\n    },\n    binary: {\n      final_image: finalBinary,\n      product_image: originalItem.binary.product_image,\n      competitor_image: originalItem.binary.competitor_image\n    }\n  });\n}\n\nreturn outputItems;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [11200, 1632],
+      "id": "1a22fe4a-043c-4e67-9f18-40271cd90b58",
+      "name": "Convert Stage 5 Final Image Response1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Aggregate all generated images from all parallel slots into one response.\nconst items = $input.all();\nconst images = [];\n\nfor (let i = 0; i < items.length; i++) {\n  const item = items[i];\n  if (!item.binary || !item.binary.final_image) continue;\n  const buf = await this.helpers.getBinaryDataBuffer(i, 'final_image');\n  const mime = item.binary.final_image.mimeType || 'image/png';\n  images.push({\n    slot: item.json.slot || (i + 1),\n    filename: item.json.output_filename || ('generated_image_' + (i + 1) + '.png'),\n    data: 'data:' + mime + ';base64,' + buf.toString('base64')\n  });\n}\n\nimages.sort((a, b) => a.slot - b.slot);\nreturn [{ json: { success: true, count: images.length, images } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [11440, 1632],
+      "id": "33333333-3333-3333-3333-333333333333",
+      "name": "Format Response"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "entries": [
+              { "name": "Access-Control-Allow-Origin", "value": "*" },
+              { "name": "Content-Type", "value": "application/json" }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [11680, 1632],
+      "id": "44444444-4444-4444-4444-444444444444",
+      "name": "Respond to Webhook"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Lumina Webhook": {
+      "main": [[{ "node": "Parse Webhook Input", "type": "main", "index": 0 }]]
+    },
+    "Parse Webhook Input": {
+      "main": [[{ "node": "Build Stage 1 - Competitor Strategy Analysis Request1", "type": "main", "index": 0 }]]
+    },
+    "Build Stage 1 - Competitor Strategy Analysis Request1": {
+      "main": [[{ "node": "HTTP - Stage 1 Competitor Strategy Analysis1", "type": "main", "index": 0 }]]
+    },
+    "HTTP - Stage 1 Competitor Strategy Analysis1": {
+      "main": [[{ "node": "Parse Stage 1 - Competitor Strategy Analysis1", "type": "main", "index": 0 }]]
+    },
+    "Parse Stage 1 - Competitor Strategy Analysis1": {
+      "main": [[{ "node": "Build Stage 2 - Safe Generation Brief Request1", "type": "main", "index": 0 }]]
+    },
+    "Build Stage 2 - Safe Generation Brief Request1": {
+      "main": [[{ "node": "HTTP - Stage 2 Safe Generation Brief1", "type": "main", "index": 0 }]]
+    },
+    "HTTP - Stage 2 Safe Generation Brief1": {
+      "main": [[{ "node": "Parse Stage 2 - Safe Generation Brief1", "type": "main", "index": 0 }]]
+    },
+    "Parse Stage 2 - Safe Generation Brief1": {
+      "main": [[{ "node": "Build Stage 3 - First Image Generation Prompt1", "type": "main", "index": 0 }]]
+    },
+    "Build Stage 3 - First Image Generation Prompt1": {
+      "main": [[{ "node": "HTTP - Stage 3 First Image Generation1", "type": "main", "index": 0 }]]
+    },
+    "HTTP - Stage 3 First Image Generation1": {
+      "main": [[{ "node": "Convert Stage 3 First Image Response1", "type": "main", "index": 0 }]]
+    },
+    "Convert Stage 3 First Image Response1": {
+      "main": [[{ "node": "Build Stage 4 - Design Difference Thinking Request1", "type": "main", "index": 0 }]]
+    },
+    "Build Stage 4 - Design Difference Thinking Request1": {
+      "main": [[{ "node": "HTTP - Stage 4 Design Difference Thinking1", "type": "main", "index": 0 }]]
+    },
+    "HTTP - Stage 4 Design Difference Thinking1": {
+      "main": [[{ "node": "Parse Stage 4 - Design Difference Thinking1", "type": "main", "index": 0 }]]
+    },
+    "Parse Stage 4 - Design Difference Thinking1": {
+      "main": [[{ "node": "Build Stage 5 - Final Retry Image Generation Prompt1", "type": "main", "index": 0 }]]
+    },
+    "Build Stage 5 - Final Retry Image Generation Prompt1": {
+      "main": [[{ "node": "HTTP - Stage 5 Final Retry Image Generation1", "type": "main", "index": 0 }]]
+    },
+    "HTTP - Stage 5 Final Retry Image Generation1": {
+      "main": [[{ "node": "Convert Stage 5 Final Image Response1", "type": "main", "index": 0 }]]
+    },
+    "Convert Stage 5 Final Image Response1": {
+      "main": [[{ "node": "Format Response", "type": "main", "index": 0 }]]
+    },
+    "Format Response": {
+      "main": [[{ "node": "Respond to Webhook", "type": "main", "index": 0 }]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "lumina-ai-v1-webhook",
+  "meta": {
+    "instanceId": "lumina-ai-project"
+  },
+  "id": "lumina-ai-workflow-001",
+  "tags": []
+}
